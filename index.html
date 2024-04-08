@@ -4,29 +4,84 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dividir e Mesclar Texto</title>
+    <!-- Adicionando o Materialize CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
     <style>
+        /* Estilização para a área de texto */
         textarea {
             width: 100%;
             height: 200px;
         }
+        /* Estilização para o botão */
+        .btn {
+            margin-top: 10px;
+            margin-right: 5px;
+        }
+        /* Estilização para a área de texto */
+        .fixed-size-textarea {
+            width: 100%;
+            height: 200px;
+            max-height: 200px; /* Tamanho máximo do campo de texto */
+            resize: none; /* Impede que o usuário redimensione o campo de texto */
+            overflow-y: auto; /* Adiciona barra de rolagem vertical quando necessário */
+        }
+        /* Redefinição do Materialize CSS para a propriedade overflow-y do textarea */
+        .materialize-textarea {
+            overflow-y: auto !important;
+        }
+        /* Ocultar a div hiddendiv do Materialize */
+        .hiddendiv.common {
+          display: none !important;
+        }
     </style>
 </head>
 <body>
-    <h2>Dividir e Mesclar Texto</h2>
-    <textarea id="inputText" placeholder="Cole seu texto aqui..."></textarea>
-    <br>
-    <label for="lines">Número de linhas por arquivo:</label>
-    <input type="number" id="lines" value="80">
-    <br>
-    <button onclick="splitText()">Dividir Texto</button>
-    <button onclick="mergeFiles()">Mesclar Arquivos</button>
-    <button onclick="downloadMergedFile()">Baixar Arquivo Mesclado</button>
-    <button onclick="downloadAllParts()">Baixar Todas as Partes</button>
-    <div id="output"></div>
+    <div class="container">
+        <h2>Dividir e Mesclar Texto</h2>
+        <div class="row">
+            <div class="input-field col s12">
+                <textarea id="inputText" class="fixed-size-textarea materialize-textarea" placeholder="Cole seu texto aqui..." oninput="updateLineCount()"></textarea>
+                <label for="inputText">Texto</label>
+                <span id="lineCount" class="helper-text"></span> <!-- Contagem de linhas -->
+            </div>
+        </div>
+        <div class="row">
+            <div class="input-field col s4">
+                <input type="number" id="lines" class="validate" value="80">
+                <label for="lines">Número de linhas por arquivo</label>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col s12">
+                <button onclick="splitText()" class="btn waves-effect waves-light">Dividir Texto</button>
+                <button onclick="mergeFiles()" class="btn waves-effect waves-light">Mesclar Arquivos</button>
+                <button onclick="downloadMergedFile()" class="btn waves-effect waves-light">Baixar Arquivo Mesclado</button>
+                <button onclick="downloadAllParts()" class="btn waves-effect waves-light">Baixar Todas as Partes</button>
+                <button onclick="createPOFile()" class="btn waves-effect waves-light">Baixar Funções Personalizadas (.po)</button>
+                <button onclick="copyToClipboard()" class="btn waves-effect waves-light">Copiar para a Área de Transferência</button> <!-- Botão para copiar para a área de transferência -->
+            </div>
+        </div>
+        <div id="output"></div>
+    </div>
 
     <script>
         var mergedContent = '';
         var parts = [];
+
+        // Função para atualizar a contagem de linhas
+        function updateLineCount() {
+            var textArea = document.getElementById('inputText');
+            var lineCount = (textArea.value.match(/\n/g) || []).length + 1;
+            document.getElementById('lineCount').textContent = lineCount + ' linhas';
+        }
+
+        // Função para copiar o conteúdo para a área de transferência
+        function copyToClipboard() {
+            var textArea = document.getElementById('inputText');
+            textArea.select();
+            document.execCommand('copy');
+            M.toast({html: 'Texto copiado para a área de transferência!', classes: 'rounded'});
+        }
 
         function splitText() {
             var inputText = document.getElementById('inputText').value;
@@ -115,8 +170,50 @@
                     });
             }
         }
+
+      // Função para encontrar e criar formato .po para funções personalizadas
+        function createPOFile() {
+            var fileInput = document.createElement('input');
+            fileInput.setAttribute('type', 'file');
+            fileInput.setAttribute('accept', '.php');
+            fileInput.addEventListener('change', function() {
+                var file = fileInput.files[0];
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    var fileContent = e.target.result;
+                    var customFunctions = fileContent.match(/_t\('.*?'\)|_e\('.*?'\)/g);
+                    var poContent = '';
+                    if (customFunctions) {
+                        customFunctions.forEach(function(func) {
+                            var msgid = func.substring(4, func.length - 2);
+                            poContent += 'msgid "' + msgid + '"\n';
+                            poContent += 'msgstr ""\n\n';
+                        });
+                        var blob = new Blob([poContent], { type: 'text/plain;charset=utf-8' });
+                        var fileName = 'custom_functions.po';
+                        var link = document.createElement('a');
+                        link.setAttribute('href', window.URL.createObjectURL(blob));
+                        link.setAttribute('download', fileName);
+                        link.style.display = 'none';
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                    }
+                };
+                reader.readAsText(file);
+            });
+            fileInput.click();
+        }
+
+
     </script>
+    <!-- Adicionando o jQuery -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <!-- Adicionando o Materialize JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <!-- Adicionando o JSZip -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+    <!-- Adicionando o FileSaver -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js"></script>
 </body>
 </html>
